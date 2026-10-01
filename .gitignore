@@ -1,0 +1,16 @@
+# Run data: job postings, generated resumes, logs
+work/
+# Skill edits and sync state (personal profile content)
+skill-backups/
+skill-sync.json
+# Never commit a skill or resumes copied in here
+skills/
+resumes/
+*.pdf
+*.tex
+master-profile.md
+
+__pycache__/
+*.pyc
+.claude/
+.env

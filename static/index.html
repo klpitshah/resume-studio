@@ -1,0 +1,702 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resume Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<style>
+  :root {
+    --bg: #faf9f5; --panel: #ffffff; --panel-2: #f5f4ee; --ink: #141413; --ink-2: #3d3d3a;
+    --muted: #73726c; --line: #e8e6dc; --line-2: #dedcd1;
+    --accent: #d97757; --accent-strong: #c6613f; --accent-soft: #f7e9e2; --accent-ink: #ffffff;
+    --ok: #4a8c5c; --err: #bf4d3c; --warn: #b7791f; --code: #f3f1ea;
+    --shadow: 0 1px 2px rgba(20,20,19,.04), 0 4px 16px rgba(20,20,19,.04);
+    --serif: "Source Serif 4", "Tiempos Text", Georgia, serif;
+    --sans: "Instrument Sans", "Styrene B", system-ui, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1f1e1d; --panel: #262624; --panel-2: #2b2a27; --ink: #faf9f5; --ink-2: #d6d4cb;
+      --muted: #a3a29b; --line: #3a3935; --line-2: #45443f;
+      --accent: #d97757; --accent-strong: #e08a6c; --accent-soft: #3b2a23; --accent-ink: #1f1e1d;
+      --ok: #7fbf8e; --err: #ec8a7a; --warn: #e3b25a; --code: #1a1918;
+      --shadow: 0 1px 2px rgba(0,0,0,.2), 0 4px 16px rgba(0,0,0,.15);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body { font: 15px/1.55 var(--sans); -webkit-font-smoothing: antialiased; }
+  button { font: inherit; cursor: pointer; }
+  code { font-family: var(--mono); font-size: .88em; }
+
+  /* ---------- top bar ---------- */
+  .top { display: flex; align-items: center; gap: 14px; padding: 18px 28px 0; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand .mark { color: var(--accent); font-size: 26px; line-height: 1; }
+  .brand h1 { font: 600 22px/1 var(--serif); margin: 0; letter-spacing: -.01em; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+  .chip { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--panel-2);
+          border: 1px solid var(--line); color: var(--muted); }
+  .chip.ok::before { content: "● "; color: var(--ok); }
+  .chip.bad { color: var(--err); border-color: var(--err); }
+  .chip.bad::before { content: "● "; }
+
+  /* ---------- tabs ---------- */
+  .tabs { display: flex; gap: 4px; padding: 16px 28px 0; overflow-x: auto; overflow-y: hidden; border-bottom: 1px solid var(--line);
+          scrollbar-width: thin; }
+  .tab { display: flex; align-items: center; gap: 8px; padding: 9px 12px 9px 14px; border: 1px solid transparent;
+         border-bottom: 0; border-radius: 10px 10px 0 0; background: transparent; color: var(--muted);
+         white-space: nowrap; max-width: 240px; position: relative; top: 1px; font-size: 14px; }
+  .tab:hover { color: var(--ink); background: var(--panel-2); }
+  .tab.active { background: var(--panel); color: var(--ink); border-color: var(--line); font-weight: 500; }
+  .tab .label { overflow: hidden; text-overflow: ellipsis; }
+  .tab .x { border: 0; background: none; color: var(--muted); padding: 0 2px; font-size: 16px; line-height: 1;
+            border-radius: 4px; opacity: .6; }
+  .tab .x:hover { opacity: 1; background: var(--line); }
+  .tab.new { color: var(--accent-strong); font-weight: 600; }
+  .ind { width: 14px; text-align: center; font-size: 13px; }
+  .ind.running { color: var(--accent); }
+  .ind.done { color: var(--ok); }
+  .ind.error, .ind.lost { color: var(--err); }
+  .ind.cancelled { color: var(--muted); }
+
+  /* ---------- layout ---------- */
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; padding: 24px 28px 48px; }
+  @media (max-width: 960px) { .layout { grid-template-columns: 1fr; padding: 20px 16px 40px; }
+                             .top, .tabs { padding-left: 16px; padding-right: 16px; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px;
+          box-shadow: var(--shadow); }
+  .pane { display: none; } .pane.active { display: block; }
+
+  /* ---------- new resume form ---------- */
+  .hero h2 { font: 600 26px/1.2 var(--serif); margin: 0 0 4px; letter-spacing: -.01em; }
+  .hero p { margin: 0 0 18px; color: var(--muted); }
+  label.f { display: block; font-size: 13px; font-weight: 500; color: var(--ink-2); margin: 0 0 6px; }
+  textarea, input[type=text] { width: 100%; background: var(--bg); color: var(--ink); border: 1px solid var(--line-2);
+    border-radius: 10px; padding: 12px 14px; font: 14.5px/1.55 var(--sans); outline: none; transition: border-color .15s, box-shadow .15s; }
+  textarea:focus, input[type=text]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  #jd { min-height: 300px; resize: vertical; }
+  .row { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; margin-top: 14px; }
+  .row .grow { flex: 1; min-width: 220px; }
+  .check { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--ink-2); padding-bottom: 12px; cursor: pointer; }
+  .check input { accent-color: var(--accent); width: 16px; height: 16px; }
+  .btn { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 10px; padding: 11px 20px;
+         font-weight: 600; transition: background .15s, transform .05s; }
+  .btn:hover { background: var(--accent-strong); } .btn:active { transform: translateY(1px); }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .btn.ghost { background: transparent; color: var(--ink-2); border: 1px solid var(--line-2); font-weight: 500; }
+  .btn.ghost:hover { background: var(--panel-2); }
+  .btn.small { padding: 6px 12px; font-size: 13px; border-radius: 8px; }
+  .toast { margin-top: 14px; font-size: 14px; color: var(--ok); min-height: 20px; }
+
+  /* ---------- run thread ---------- */
+  .turn + .turn { margin-top: 26px; padding-top: 22px; border-top: 1px dashed var(--line-2); }
+  .you { background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px;
+         margin-bottom: 14px; white-space: pre-wrap; font-size: 14px; }
+  .you::before { content: "You"; display: block; font-size: 11px; font-weight: 600; letter-spacing: .06em;
+                 text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+  .status { display: flex; align-items: center; gap: 10px; font-size: 14px; margin-bottom: 12px; }
+  .status .spin { color: var(--accent); font-size: 18px; width: 18px; text-align: center; }
+  .status .verb { font-weight: 500; }
+  .status .meta { color: var(--muted); font-size: 13px; }
+  .status .spacer { flex: 1; }
+  .status.done .spin { color: var(--ok); } .status.error .spin, .status.lost .spin { color: var(--err); }
+  .status.cancelled .spin { color: var(--muted); }
+  details.log > summary { cursor: pointer; font-size: 13px; color: var(--muted); list-style: none; margin-bottom: 8px; user-select: none; }
+  details.log > summary::before { content: "▸ "; } details.log[open] > summary::before { content: "▾ "; }
+  .term { font: 12.5px/1.6 var(--mono); background: var(--code); border: 1px solid var(--line); border-radius: 10px;
+          padding: 12px 14px; max-height: 320px; overflow: auto; white-space: pre-wrap; word-break: break-word; }
+  .term .tool { color: var(--ink-2); } .term .tool b { color: var(--accent); font-weight: 400; }
+  .term .tool .n { font-weight: 500; color: var(--ink); }
+  .term .text { color: var(--ink); margin: 4px 0; }
+  .term .text::before { content: "⏺ "; color: var(--muted); }
+  .term .info { color: var(--muted); } .term .error { color: var(--err); }
+  .term .error::before { content: "  ⎿ "; }
+  .report { margin-top: 16px; font-size: 14.5px; color: var(--ink-2); }
+  .report h1, .report h2, .report h3 { font: 600 17px/1.3 var(--serif); color: var(--ink); margin: 18px 0 6px; }
+  .report strong { color: var(--ink); }
+  .report code { background: var(--code); padding: 1px 5px; border-radius: 5px; }
+  .report pre { background: var(--code); padding: 12px; border-radius: 10px; overflow: auto; }
+  .report ul { padding-left: 20px; } .report li { margin: 2px 0; }
+  .report table { border-collapse: collapse; font-size: 13.5px; }
+  .report td, .report th { border: 1px solid var(--line); padding: 5px 9px; text-align: left; }
+  .banner { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; border-radius: 10px; padding: 12px 14px; margin: 14px 0; font-size: 14px; }
+  .banner.exists { background: var(--accent-soft); border: 1px solid var(--accent); }
+  .banner.saved { background: var(--panel-2); border: 1px solid var(--line); }
+  .banner .grow { flex: 1; min-width: 200px; overflow-wrap: anywhere; }
+  .preview { width: 100%; height: 640px; border: 1px solid var(--line); border-radius: 10px; margin-top: 10px; background: #fff; }
+  .reply { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .reply textarea { min-height: 76px; }
+  .empty { color: var(--muted); font-size: 14px; }
+
+  /* ---------- sidebar ---------- */
+  aside h3 { font: 600 16px/1.2 var(--serif); margin: 0; }
+  aside .head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .icon-btn { border: 0; background: none; color: var(--muted); font-size: 15px; padding: 4px 6px; border-radius: 6px; }
+  .icon-btn:hover { background: var(--panel-2); color: var(--ink); }
+  #resumes { list-style: none; padding: 0; margin: 0; max-height: 72vh; overflow: auto; }
+  #resumes li { padding: 10px 0; border-top: 1px solid var(--line); }
+  #resumes li:first-child { border-top: 0; padding-top: 0; }
+  #resumes .row1 { display: flex; gap: 8px; align-items: baseline; }
+  #resumes .co { flex: 1; min-width: 0; overflow-wrap: anywhere; font-weight: 500; font-size: 14px; background: none; border: 0; padding: 0; color: var(--ink); text-align: left; }
+  #resumes .co:hover { color: var(--accent-strong); }
+  #resumes .when { color: var(--muted); font-size: 12px; white-space: nowrap; }
+  #resumes a { display: inline-block; color: var(--accent-strong); font-size: 12.5px; margin: 2px 10px 0 0; text-decoration: none; }
+  #resumes a:hover { text-decoration: underline; }
+  .tab-plus { border: 0; background: none; color: var(--accent-strong); font-size: 20px; line-height: 1; width: 34px; height: 34px;
+              border-radius: 8px; align-self: center; flex: none; margin-left: 2px; }
+  .tab-plus:hover { background: var(--accent-soft); }
+  .tab.draft .label { color: var(--muted); }
+  .ind.draft { color: var(--muted); }
+  .form[hidden], .reply[hidden] { display: none; }
+  .linkbar { display: flex; align-items: center; gap: 8px; margin: -6px 0 16px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+  .linkbar .ico { font-size: 14px; }
+  .linkbar a { flex: 1; min-width: 0; color: var(--accent-strong); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-decoration: none; }
+  .linkbar a:hover { text-decoration: underline; }
+  .linkbar input { flex: 1; padding: 7px 10px; font-size: 14px; border-radius: 8px; }
+  .tab.pinned { color: var(--accent-strong); font-weight: 500; padding-right: 14px; }
+  .tab.pinned .ind { color: var(--accent); }
+  .tab.pinned .dirty-dot { color: var(--accent); }
+  .tabs .sep { width: 1px; background: var(--line-2); margin: 8px 6px 10px; flex: none; }
+
+  /* ---------- skill editor ---------- */
+  .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 16px 0 10px; }
+  .toolbar select { font: 14px var(--sans); color: var(--ink); background: var(--bg); border: 1px solid var(--line-2);
+                    border-radius: 8px; padding: 7px 10px; outline: none; }
+  .toolbar select:focus { border-color: var(--accent); }
+  .seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: 8px; overflow: hidden; }
+  .seg button { border: 0; background: transparent; color: var(--muted); padding: 6px 12px; font-size: 13px; }
+  .seg button.on { background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; }
+  .toolbar .spacer { flex: 1; }
+  .saved-state { font-size: 13px; color: var(--muted); }
+  .saved-state.dirty { color: var(--accent-strong); font-weight: 500; }
+  textarea.editor { font: 13px/1.6 var(--mono); height: 64vh; min-height: 320px; resize: vertical; tab-size: 2; }
+  .md-preview { border: 1px solid var(--line); border-radius: 10px; padding: 6px 22px; height: 64vh; overflow: auto; background: var(--bg); }
+  .md-preview[hidden], textarea.editor[hidden] { display: none; }
+  .sync { font-size: 13px; color: var(--muted); }
+  .sync.warn { color: var(--ink); }
+  a.btn { text-decoration: none; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="brand"><span class="mark">✻</span><h1>Resume Studio</h1></div>
+  <div class="chips" id="setup"><span class="chip">checking setup…</span></div>
+</div>
+
+<nav class="tabs" id="tabs"></nav>
+
+<div class="layout">
+  <main id="panes">
+    <section class="pane card" id="pane-skill">
+      <div class="hero">
+        <h2>Profile &amp; skill</h2>
+        <p>Edit your resume-tailor skill. Saving updates the copy Claude Code uses, so the next resume you tailor picks it up.
+           The agent tab keeps its own copy on claude.ai; to update that one, download the .zip and upload it there.</p>
+      </div>
+      <div class="banner saved sync" id="syncMsg">Loading…</div>
+      <div class="toolbar">
+        <select id="skillFile"></select>
+        <div class="seg"><button id="modeEdit" class="on">Edit</button><button id="modePreview">Preview</button></div>
+        <span class="spacer"></span>
+        <span class="saved-state" id="savedState"></span>
+        <button class="btn ghost small" id="revert" disabled>Revert</button>
+        <button class="btn small" id="saveSkill" disabled>Save</button>
+        <a class="btn ghost small" href="/api/skill/zip" title="Upload this in claude.ai to update the agent tab's copy">Download .zip</a>
+      </div>
+      <textarea class="editor" id="editor" spellcheck="false"></textarea>
+      <div class="md-preview report" id="mdPreview" hidden></div>
+    </section>
+  </main>
+
+  <aside class="card">
+    <div class="head"><h3>Saved resumes</h3><button class="icon-btn" id="refresh" title="Refresh">↻</button></div>
+    <ul id="resumes"></ul>
+  </aside>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const H = { "Content-Type": "application/json", "X-Resume-Studio": "1" };
+const SPIN = ["·", "✢", "✳", "✶", "✻", "✽", "✻", "✶", "✳", "✢"];
+const ICON = { done: "✓", error: "✕", lost: "!", cancelled: "–", draft: "○" };
+const STORE = "resume-studio-tabs-v2";
+let spinFrame = 0;
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const md = s => window.marked ? marked.parse(s) : `<pre>${esc(s)}</pre>`;
+
+// tab = { key, title, draft: {jd, company, overwrite} | null, sessionId, turns: [...] }
+// A tab with no turns is still a form; once submitted it shows its run.
+const state = { tabs: [], active: null };
+
+function save() {
+  try {
+    localStorage.setItem(STORE, JSON.stringify({
+      active: state.active,
+      tabs: state.tabs.map(t => ({ key: t.key, title: t.title, sessionId: t.sessionId, renamed: t.renamed, link: t.link,
+        draft: t.turns.length ? null : readDraft(t),
+        turns: t.turns.map(u => ({ jobId: u.jobId, userMsg: u.userMsg })) })),
+    }));
+  } catch (e) {}
+}
+
+// ---------------- setup + sidebar ----------------
+async function loadSetup() {
+  try {
+    const s = await (await fetch("/api/setup")).json();
+    const items = [["Claude CLI", s.claude], ["pdflatex", s.pdflatex], ["pdftotext", s.pdftotext], ["skill", s.skill]];
+    $("setup").innerHTML = items.map(([k, v]) => `<span class="chip ${v ? "ok" : "bad"}">${k}${v ? "" : " missing"}</span>`).join("")
+      + `<span class="chip" title="${esc(s.resumes_dir)}">📁 Documents\\resumes</span>`;
+  } catch (e) { $("setup").innerHTML = `<span class="chip bad">server offline</span>`; }
+}
+
+async function loadResumes() {
+  let list = [];
+  try { list = await (await fetch("/api/resumes")).json(); } catch (e) {}
+  $("resumes").innerHTML = list.map(r => {
+    const co = encodeURIComponent(r.company);
+    const links = r.files.map(f => `<a href="/files/${co}/${encodeURIComponent(f)}" target="_blank">${esc(f.replace(/\.pdf$/, ""))} ↗</a>`).join("");
+    const when = new Date(r.modified * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    return `<li><div class="row1"><button class="co" data-co="${co}" title="Open folder in Explorer">${esc(r.company)}</button>
+      <span class="when">${when}</span></div>${links}</li>`;
+  }).join("") || `<li class="empty">Nothing saved yet</li>`;
+}
+$("resumes").addEventListener("click", e => {
+  const co = e.target.closest("[data-co]")?.dataset.co;
+  if (co) fetch(`/api/open/${co}`, { method: "POST", headers: H });
+});
+$("refresh").onclick = loadResumes;
+
+// ---------------- tab bar ----------------
+function tabStatus(t) {
+  const last = t.turns[t.turns.length - 1];
+  return last ? last.status : "draft";
+}
+
+function renderTabs() {
+  const pinned = `<div class="tab pinned ${state.active === "skill" ? "active" : ""}" data-key="skill" role="button" title="Edit your profile and skill">
+      <span class="ind">✎</span><span class="label">Profile &amp; skill</span><span class="dirty-dot">${skill.dirty ? "●" : ""}</span></div><span class="sep"></span>`;
+  const html = [pinned].concat(state.tabs.map(t => {
+    const st = tabStatus(t);
+    const ind = st === "running" ? SPIN[spinFrame % SPIN.length] : (ICON[st] || "·");
+    return `<div class="tab ${st} ${state.active === t.key ? "active" : ""}" data-key="${t.key}" role="button" title="${esc(t.title)}">
+      <span class="ind ${st}">${ind}</span><span class="label">${esc(t.title)}</span>
+      <button class="x" data-close="${t.key}" title="Close tab">×</button></div>`;
+  }));
+  html.push(`<button class="tab-plus" id="plus" title="New resume tab">＋</button>`);
+  $("tabs").innerHTML = html.join("");
+}
+$("tabs").addEventListener("click", e => {
+  if (e.target.closest("#plus")) { newTab(); return; }
+  const close = e.target.closest("[data-close]");
+  if (close) { closeTab(close.dataset.close); return; }
+  const tab = e.target.closest("[data-key]");
+  if (tab) activate(tab.dataset.key);
+});
+
+function activate(key) {
+  state.active = key;
+  document.querySelectorAll(".pane").forEach(p => p.classList.toggle("active", p.id === "pane-" + key));
+  renderTabs(); save();
+  if (key === "skill") return loadSkill();
+  const t = state.tabs.find(x => x.key === key);
+  if (t && !t.turns.length) t.pane.querySelector(".jd").focus();
+}
+
+// ---------------- profile & skill editor ----------------
+// skill = { files, path, mtime, original, dirty, loaded }
+const skill = { files: [], path: null, mtime: null, original: "", dirty: false, loaded: false };
+
+function setDirty(d) {
+  if (skill.dirty === d) return;
+  skill.dirty = d;
+  $("saveSkill").disabled = $("revert").disabled = !d;
+  $("savedState").textContent = d ? "Unsaved changes" : "";
+  $("savedState").className = "saved-state" + (d ? " dirty" : "");
+  const dot = document.querySelector(".tab.pinned .dirty-dot");
+  if (dot) dot.textContent = d ? "●" : "";
+}
+
+async function loadSkill(force) {
+  if (skill.loaded && !force) return;
+  let j;
+  try { j = await (await fetch("/api/skill/files")).json(); }
+  catch (e) { $("syncMsg").textContent = "Can't reach the server."; return; }
+  skill.files = j.files; skill.loaded = true;
+  const conflicts = (j.conflicts || []).map(p =>
+    `<button class="btn ghost small" data-take="${esc(p)}">Use agent-tab version of ${esc(p)}</button>`).join(" ");
+  $("syncMsg").className = "banner saved sync" + (conflicts ? " warn" : "");
+  $("syncMsg").innerHTML = `<span class="grow">Skill folder <code>${esc(j.dir)}</code> · ${esc(j.message)}</span>${conflicts}`;
+  $("skillFile").innerHTML = j.files.map(f => `<option value="${esc(f.path)}">${esc(f.path)}</option>`).join("");
+  const want = skill.path && j.files.some(f => f.path === skill.path) ? skill.path : j.files[0]?.path;
+  if (want) { $("skillFile").value = want; await openSkillFile(want); }
+}
+
+$("syncMsg").addEventListener("click", async e => {
+  const p = e.target.closest("[data-take]")?.dataset.take;
+  if (!p || !confirm(`Replace your local ${p} with the agent tab's version? Your version is kept in skill-backups.`)) return;
+  await fetch("/api/skill/take-agent", { method: "POST", headers: H, body: JSON.stringify({ path: p }) });
+  skill.path = p; loadSkill(true);
+});
+
+async function openSkillFile(path) {
+  const j = await (await fetch(`/api/skill/file?path=${encodeURIComponent(path)}`)).json();
+  if (j.error) return alert(j.error);
+  skill.path = path; skill.mtime = j.mtime; skill.original = j.content;
+  $("editor").value = j.content;
+  setDirty(false);
+  if (!$("mdPreview").hidden) renderPreview();
+}
+
+function renderPreview() {
+  const v = $("editor").value;
+  $("mdPreview").innerHTML = skill.path.endsWith(".md") ? md(v) : `<pre>${esc(v)}</pre>`;
+}
+
+$("skillFile").onchange = async e => {
+  if (skill.dirty && !confirm("You have unsaved changes. Discard them?")) { e.target.value = skill.path; return; }
+  openSkillFile(e.target.value);
+};
+$("editor").addEventListener("input", () => setDirty($("editor").value !== skill.original));
+$("editor").addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); if (skill.dirty) saveSkill(); }
+});
+$("modeEdit").onclick = () => { $("editor").hidden = false; $("mdPreview").hidden = true;
+  $("modeEdit").classList.add("on"); $("modePreview").classList.remove("on"); $("editor").focus(); };
+$("modePreview").onclick = () => { renderPreview(); $("editor").hidden = true; $("mdPreview").hidden = false;
+  $("modePreview").classList.add("on"); $("modeEdit").classList.remove("on"); };
+$("revert").onclick = () => { if (confirm("Throw away your changes?")) { $("editor").value = skill.original; setDirty(false); } };
+$("saveSkill").onclick = () => saveSkill();
+
+async function saveSkill() {
+  const content = $("editor").value;
+  $("saveSkill").disabled = true;
+  let r, j;
+  try {
+    r = await fetch("/api/skill/file", { method: "POST", headers: H,
+      body: JSON.stringify({ path: skill.path, content, mtime: skill.mtime }) });
+    j = await r.json();
+  } catch (e) { $("saveSkill").disabled = false; return alert("Can't reach the server."); }
+  if (!r.ok) { $("saveSkill").disabled = false; return alert(j.error); }
+  skill.original = content; skill.mtime = j.mtime;
+  setDirty(false);
+  $("savedState").textContent = "Saved ✓ next run uses it";
+}
+
+window.addEventListener("beforeunload", e => { if (skill.dirty) { e.preventDefault(); e.returnValue = ""; } });
+
+function closeTab(key) {
+  const t = state.tabs.find(x => x.key === key);
+  if (!t) return;
+  const last = t.turns[t.turns.length - 1];
+  if (last && last.status === "running") {
+    if (!confirm("This resume is still being generated. Stop it and close the tab?")) return;
+    fetch(`/api/jobs/${last.jobId}/cancel`, { method: "POST", headers: H });
+  }
+  const i = state.tabs.indexOf(t);
+  state.tabs.splice(i, 1);
+  t.pane.remove();
+  if (!state.tabs.length) return newTab();
+  if (state.active === key) activate(state.tabs[Math.max(0, i - 1)].key);
+  else { renderTabs(); save(); }
+}
+
+function guessTitle(jd, company) {
+  if (company.trim()) return company.trim();
+  const at = jd.match(/\b(?:[Aa]t|[Jj]oin)\s+([A-Z][\w&.\- ]{1,30}?)(?:[,.!\n]| is | we )/);
+  if (at) return at[1].trim();
+  return (jd.trim().split("\n")[0] || "Resume").slice(0, 32);
+}
+
+// ---------------- a tab's pane ----------------
+function makeTab({ key, title, sessionId, renamed, draft, link }) {
+  const t = { key: key || Math.random().toString(36).slice(2, 10), title: title || "New resume",
+              sessionId: sessionId || null, renamed: !!renamed, turns: [] };
+  const pane = document.createElement("section");
+  pane.className = "pane card";
+  pane.id = "pane-" + t.key;
+  pane.innerHTML = `
+    <div class="linkbar"></div>
+    <div class="form">
+      <div class="hero">
+        <h2>Tailor a new resume</h2>
+        <p>Paste a job posting. Hit ＋ in the tab bar to open another tab and run several at once.</p>
+      </div>
+      <label class="f">Job posting</label>
+      <textarea class="jd" placeholder="Paste the full job posting here…" style="min-height:300px;resize:vertical"></textarea>
+      <div class="row">
+        <div class="grow">
+          <label class="f">Company folder <span style="color:var(--muted);font-weight:400">(optional, taken from the posting if blank)</span></label>
+          <input type="text" class="company" placeholder="e.g. Goldman Sachs">
+        </div>
+        <label class="check"><input type="checkbox" class="overwrite"> Overwrite if it exists</label>
+        <button class="btn go">Tailor resume ✻</button>
+      </div>
+    </div>
+    <div class="thread"></div>
+    <div class="reply" hidden>
+      <label class="f">Reply <span style="color:var(--muted);font-weight:400">(answer its questions, ask for changes, "yes overwrite it"…)</span></label>
+      <textarea class="msg" placeholder="Reply to Claude about this resume…"></textarea>
+      <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn send">Send</button></div>
+    </div>`;
+  $("panes").appendChild(pane);
+  t.pane = pane;
+
+  const q = s => pane.querySelector(s);
+  if (draft) { q(".jd").value = draft.jd || ""; q(".company").value = draft.company || ""; q(".overwrite").checked = !!draft.overwrite; }
+  q(".go").onclick = () => submit(t);
+  q(".jd").addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) submit(t); });
+  pane.querySelector(".form").addEventListener("input", save);
+  q(".company").addEventListener("input", () => {
+    t.title = q(".company").value.trim() || "New resume";
+    const label = document.querySelector(`.tab[data-key="${t.key}"] .label`);
+    if (label) label.textContent = t.title;
+  });
+  q(".send").onclick = () => { const m = q(".msg").value.trim(); if (m) { q(".msg").value = ""; reply(t, m); } };
+  q(".msg").addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) q(".send").click(); });
+
+  t.link = link || "";
+  renderLink(t);
+  state.tabs.push(t);
+  return t;
+}
+
+// The job posting's URL, kept with the tab. Shows as a link once set.
+function renderLink(t, editing) {
+  const bar = t.pane.querySelector(".linkbar");
+  if (t.link && !editing) {
+    bar.innerHTML = `<span class="ico">🔗</span><a href="${esc(t.link)}" target="_blank" rel="noopener">${esc(t.link)}</a>
+      <button class="btn ghost small copy">Copy</button><button class="btn ghost small edit">Edit</button>`;
+    bar.querySelector(".copy").onclick = e => {
+      navigator.clipboard?.writeText(t.link);
+      e.target.textContent = "Copied"; setTimeout(() => { e.target.textContent = "Copy"; }, 1200);
+    };
+    bar.querySelector(".edit").onclick = () => renderLink(t, true);
+    return;
+  }
+  bar.innerHTML = `<span class="ico">🔗</span><input type="text" placeholder="Paste the job posting link to keep it with this tab" value="${esc(t.link)}">
+    ${editing ? `<button class="btn small ok">Save</button>` : ""}`;
+  const input = bar.querySelector("input");
+  const commit = () => {
+    let v = input.value.trim();
+    if (v && !/^https?:\/\//i.test(v)) v = "https://" + v;
+    t.link = v;
+    save(); renderLink(t);
+  };
+  input.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); commit(); } });
+  input.addEventListener("paste", () => setTimeout(commit, 0));
+  input.addEventListener("blur", () => { if (input.value.trim() !== t.link) commit(); });
+  bar.querySelector(".ok")?.addEventListener("click", commit);
+  if (editing) { input.focus(); input.select(); }
+}
+
+function readDraft(t) {
+  const q = s => t.pane.querySelector(s);
+  return { jd: q(".jd").value, company: q(".company").value, overwrite: q(".overwrite").checked };
+}
+
+function newTab() {
+  const t = makeTab({});
+  activate(t.key);
+  return t;
+}
+
+async function submit(t) {
+  const { jd, company, overwrite } = readDraft(t);
+  const go = t.pane.querySelector(".go");
+  go.disabled = true;
+  try {
+    let r, j;
+    try {
+      r = await fetch("/api/generate", { method: "POST", headers: H, body: JSON.stringify({ jd, company, overwrite }) });
+      j = await r.json();
+    } catch (e) {
+      alert("Can't reach the Resume Studio server. Make sure start.bat is running and open http://localhost:8765");
+      return;
+    }
+    if (!r.ok) { alert(j.error); return; }
+    t.title = guessTitle(jd, company);
+    if (company.trim()) t.renamed = true;   // the name you gave wins over the saved folder name
+    t.pane.querySelector(".form").hidden = true;
+    addTurn(t, j.id, null, jd);
+    renderTabs(); save();
+  } finally { go.disabled = false; }
+}
+
+function addTurn(t, jobId, userMsg, jd) {
+  const u = { jobId, userMsg: userMsg || null, since: 0, status: "running", result: null, lastTool: "" };
+  const el = document.createElement("div");
+  el.className = "turn";
+  const header = jd != null
+    ? `<details class="log" style="margin-bottom:12px"><summary>Job posting</summary><div class="you" style="max-height:220px;overflow:auto">${esc(jd)}</div></details>` : "";
+  el.innerHTML = `${header}${userMsg ? `<div class="you">${esc(userMsg)}</div>` : ""}
+    <div class="status running"><span class="spin">✻</span><span class="verb">Starting…</span><span class="meta"></span>
+      <span class="spacer"></span><button class="btn ghost small cancel">Stop</button></div>
+    <details class="log" open><summary>Activity</summary><div class="term"></div></details>
+    <div class="out"></div>`;
+  el.querySelector(".cancel").onclick = () => fetch(`/api/jobs/${jobId}/cancel`, { method: "POST", headers: H });
+  t.pane.querySelector(".thread").appendChild(el);
+  t.pane.querySelector(".form").hidden = true;
+  t.pane.querySelector(".reply").hidden = true;
+  u.dom = el;
+  t.turns.push(u);
+  return u;
+}
+
+// ---------------- polling ----------------
+function verbFor(tool) {
+  const s = tool.toLowerCase();
+  if (s.includes("check_resume")) return "Checking gates";
+  if (s.includes("pdflatex")) return "Compiling";
+  if (s.includes("pdftotext")) return "Reading the PDF";
+  if (s.includes("master-profile")) return "Reading your profile";
+  if (s.startsWith("skill")) return "Loading skill";
+  if (s.includes("copy-item") || s.includes("documents\\resumes") || s.includes("documents/resumes")) return "Saving";
+  if (s.startsWith("write") || s.startsWith("edit")) return "Writing";
+  if (s.startsWith("read")) return "Reading";
+  return "Tailoring";
+}
+
+function termLine(ev) {
+  const d = document.createElement("div");
+  d.className = ev.kind;
+  if (ev.kind === "tool") {
+    const i = ev.text.indexOf(": ");
+    const name = i > 0 ? ev.text.slice(0, i) : ev.text, arg = i > 0 ? ev.text.slice(i + 2) : "";
+    d.innerHTML = `<b>⏺</b> <span class="n">${esc(name)}</span>(${esc(arg.length > 400 ? arg.slice(0, 400) + "…" : arg)})`;
+  } else d.textContent = ev.text;
+  return d;
+}
+
+function pdfFrom(result) {
+  const m = (result || "").match(/resumes[\\\/]+([^\\\/\n`*]+?)[\\\/]+([^\\\/\n`*\s]+\.pdf)/i);
+  return m ? { company: m[1].trim(), file: m[2] } : null;
+}
+
+function fmtTime(s) { return s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`; }
+
+async function pollTurn(t, u) {
+  let j;
+  try {
+    const r = await fetch(`/api/jobs/${u.jobId}?since=${u.since}`);
+    if (r.status === 404) {
+      u.status = "lost";
+      u.result = "_This run's details are gone (the server was restarted). Any saved PDF is still in the sidebar._";
+      return finish(t, u);
+    }
+    j = await r.json();
+  } catch (e) { return; }
+  u.since = j.next;
+  if (j.session_id) t.sessionId = j.session_id;
+  const term = u.dom.querySelector(".term");
+  const atBottom = term.scrollHeight - term.scrollTop - term.clientHeight < 40;
+  for (const ev of j.events) {
+    term.appendChild(termLine(ev));
+    if (ev.kind === "tool") u.lastTool = ev.text;
+  }
+  if (atBottom) term.scrollTop = term.scrollHeight;
+  u.elapsed = j.elapsed; u.cost = j.cost;
+  if (j.status === "running") {
+    u.dom.querySelector(".verb").textContent = verbFor(u.lastTool) + "…";
+    u.dom.querySelector(".meta").textContent = fmtTime(j.elapsed);
+    return;
+  }
+  u.status = j.status; u.result = j.result || "";
+  finish(t, u);
+}
+
+function finish(t, u) {
+  const st = u.dom.querySelector(".status");
+  st.className = "status " + u.status;
+  st.querySelector(".spin").textContent = ICON[u.status] || "·";
+  st.querySelector(".verb").textContent = { done: "Done", error: "Failed", cancelled: "Stopped", lost: "Unavailable" }[u.status] || u.status;
+  st.querySelector(".meta").textContent = [u.elapsed != null ? fmtTime(u.elapsed) : "",
+    u.cost ? `~$${u.cost.toFixed(2)} at API rates (not billed on your plan)` : ""].filter(Boolean).join(" · ");
+  st.querySelector(".cancel")?.remove();
+  if (u.status === "done") u.dom.querySelector("details.log:not([style])").open = false;
+
+  let html = "";
+  const ex = (u.result || "").match(/^EXISTS:\s*(.+)$/m);
+  if (ex) html += `<div class="banner exists"><span class="grow">A resume already exists at <code>${esc(ex[1].trim())}</code></span>
+    <button class="btn small overwrite">Overwrite it</button></div>`;
+  const pdf = u.status === "done" && !ex ? pdfFrom(u.result) : null;
+  if (pdf) {
+    const url = `/files/${encodeURIComponent(pdf.company)}/${encodeURIComponent(pdf.file)}?t=${Date.now()}`;
+    html += `<div class="banner saved"><span class="grow">Saved to <code>resumes\\${esc(pdf.company)}\\${esc(pdf.file)}</code></span>
+      <a class="btn small" href="${url}" target="_blank" style="text-decoration:none">Open PDF ↗</a>
+      <button class="btn ghost small folder">Show folder</button>
+      <button class="btn ghost small toggle">Preview</button></div>
+      <iframe class="preview" hidden data-src="${url}"></iframe>`;
+    if (!t.renamed) { t.title = pdf.company; t.renamed = true; }
+  }
+  html += `<div class="report">${md(u.result || "")}</div>`;
+  const out = u.dom.querySelector(".out");
+  out.innerHTML = html;
+  out.querySelector(".overwrite")?.addEventListener("click", () =>
+    reply(t, "Yes, overwrite the existing resume PDF and .tex with the new version."));
+  out.querySelector(".folder")?.addEventListener("click", () =>
+    fetch(`/api/open/${encodeURIComponent(pdf.company)}`, { method: "POST", headers: H }));
+  out.querySelector(".toggle")?.addEventListener("click", e => {
+    const f = out.querySelector(".preview");
+    if (!f.src) f.src = f.dataset.src;
+    f.hidden = !f.hidden;
+    e.target.textContent = f.hidden ? "Preview" : "Hide preview";
+  });
+  if (t.sessionId && t.turns[t.turns.length - 1] === u) t.pane.querySelector(".reply").hidden = false;
+  renderTabs(); save(); loadResumes();
+}
+
+let polling = false;
+async function tick() {
+  spinFrame++;
+  const running = state.tabs.flatMap(t => t.turns.filter(u => u.status === "running").map(u => [t, u]));
+  const frame = SPIN[spinFrame % SPIN.length];
+  running.forEach(([, u]) => { const s = u.dom.querySelector(".spin"); if (s) s.textContent = frame; });
+  // Update spinners in place; rebuilding the tab bar here would eat clicks.
+  document.querySelectorAll(".tab .ind.running").forEach(s => { s.textContent = frame; });
+  if (polling || spinFrame % 6) return;   // animate every 200ms, poll every ~1.2s
+  polling = true;
+  try { await Promise.all(running.map(([t, u]) => pollTurn(t, u))); } finally { polling = false; }
+}
+setInterval(tick, 200);
+
+async function reply(t, message) {
+  if (!t.sessionId) return alert("This run has no session to continue.");
+  let r, j;
+  try {
+    r = await fetch("/api/reply", { method: "POST", headers: H, body: JSON.stringify({ session_id: t.sessionId, message }) });
+    j = await r.json();
+  } catch (e) { return alert("Can't reach the Resume Studio server."); }
+  if (!r.ok) return alert(j.error);
+  addTurn(t, j.id, message);
+  renderTabs(); save();
+}
+
+// ---------------- start ----------------
+if (!/^https?:$/.test(location.protocol)) {
+  document.body.insertAdjacentHTML("afterbegin",
+    `<div style="background:var(--accent);color:var(--accent-ink);padding:12px 28px;font-weight:500">
+      This page is opened as a file, so it can't talk to the server.
+      Run <code>start.bat</code> and use <a href="http://localhost:8765" style="color:inherit">http://localhost:8765</a> instead.</div>`);
+}
+
+(function restore() {
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(STORE) || "null"); } catch (e) {}
+  for (const s of saved?.tabs || []) {
+    const t = makeTab(s);
+    for (const u of s.turns) addTurn(t, u.jobId, u.userMsg);
+  }
+  if (!state.tabs.length) return newTab();
+  activate(saved.active === "skill" || state.tabs.some(t => t.key === saved.active) ? saved.active : state.tabs[0].key);
+})();
+loadSetup(); loadResumes();
+</script>
+</body>
+</html>
